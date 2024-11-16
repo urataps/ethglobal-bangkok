@@ -5,6 +5,9 @@ import { ThemeProvider } from '@/components/theme-provider';
 
 import './globals.css';
 
+import { DynamicContextProvider } from '@dynamic-labs/sdk-react-core';
+import { EthereumWalletConnectors } from '@dynamic-labs/ethereum';
+
 export const metadata: Metadata = {
   metadataBase: new URL('https://chat.vercel.ai'),
   title: 'Next.js Chatbot Template',
@@ -42,7 +45,7 @@ export default async function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang='en'
       // `next-themes` injects an extra classname to the body element to avoid
       // visual flicker before hydration. Hence the `suppressHydrationWarning`
       // prop is necessary to avoid the React hydration mismatch warning.
@@ -56,16 +59,23 @@ export default async function RootLayout({
           }}
         />
       </head>
-      <body className="antialiased">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
+      <body className='antialiased'>
+        <DynamicContextProvider
+          settings={{
+            environmentId: 'cb19a4ed-3d40-4a27-8e2a-381cbd8b4a30',
+            walletConnectors: [EthereumWalletConnectors],
+          }}
         >
-          <Toaster position="top-center" />
-          {children}
-        </ThemeProvider>
+          <ThemeProvider
+            attribute='class'
+            defaultTheme='system'
+            enableSystem
+            disableTransitionOnChange
+          >
+            <Toaster position='top-center' />
+            {children}
+          </ThemeProvider>
+        </DynamicContextProvider>
       </body>
     </html>
   );

@@ -21,6 +21,7 @@ import {
 import { BetterTooltip } from '@/components/ui/tooltip';
 import Link from 'next/link';
 import Image from 'next/image';
+import { DynamicWidget } from '@dynamic-labs/sdk-react-core';
 
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
@@ -64,13 +65,11 @@ export function AppSidebar({ user }: { user: User | undefined }) {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className='gap-0 -mx-2'>
-        {user && (
-          <SidebarGroup>
-            <SidebarGroupContent>
-              <SidebarUserNav user={user} />
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <DynamicWidget />
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarFooter>
     </Sidebar>
   );
