@@ -28,6 +28,8 @@ import {
 } from '@/lib/utils';
 
 import { generateTitleFromUserMessage } from '../../actions';
+import { FarmCategories, InvestmentRiskLevel } from '@/lib/schemas';
+import { generateInvestmentAdviceWebhook } from '@/lib/ai/custom-agent';
 
 export const maxDuration = 60;
 
@@ -35,7 +37,8 @@ type AllowedTools =
   | 'createDocument'
   | 'updateDocument'
   | 'requestSuggestions'
-  | 'getWeather';
+  | 'getWeather'
+  | 'getStrategies';
 
 const blocksTools: AllowedTools[] = [
   'createDocument',
@@ -45,7 +48,13 @@ const blocksTools: AllowedTools[] = [
 
 const weatherTools: AllowedTools[] = ['getWeather'];
 
-const allTools: AllowedTools[] = [...blocksTools, ...weatherTools];
+const blockchainTools: AllowedTools[] = ['getStrategies'];
+
+const allTools: AllowedTools[] = [
+  ...blocksTools,
+  ...weatherTools,
+  ...blockchainTools,
+];
 
 export async function POST(request: Request) {
   const {
@@ -96,6 +105,47 @@ export async function POST(request: Request) {
     maxSteps: 5,
     experimental_activeTools: allTools,
     tools: {
+      getStrategies: {
+        description: 'Get investment strategies',
+        parameters: z.object({
+          categories: z.enum([
+            FarmCategories.ARTIFICIAL_INTELLIGENCE,
+            FarmCategories.BORROWING_LENDING,
+            FarmCategories.DE_PIN,
+            FarmCategories.MEME_FINANCE,
+            FarmCategories.RESTAKING_PROTOCOLS,
+            FarmCategories.R_W_A,
+            FarmCategories.STABLE_COINS,
+          ]),
+          risk: z.enum([
+            InvestmentRiskLevel.LOW,
+            InvestmentRiskLevel.AVERAGE,
+            InvestmentRiskLevel.MEDIUM,
+            InvestmentRiskLevel.HIGH,
+            InvestmentRiskLevel.Degen,
+          ]),
+          amount: z.number(),
+          investmentTimelineInMonths: z.number(),
+        }),
+        execute: async ({
+          categories,
+          risk,
+          amount,
+          investmentTimelineInMonths,
+        }) => {
+          const strategies = await generateInvestmentAdviceWebhook({
+            categories: [categories],
+            risk,
+            amount,
+            time: investmentTimelineInMonths,
+          });
+
+          if (!strategies || strategies.length === 0) {
+            return { strategies: [] };
+          }
+          return { strategies };
+        },
+      },
       getWeather: {
         description: 'Get the current weather at a location',
         parameters: z.object({
@@ -104,7 +154,7 @@ export async function POST(request: Request) {
         }),
         execute: async ({ latitude, longitude }) => {
           const response = await fetch(
-            `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m&hourly=temperature_2m&daily=sunrise,sunset&timezone=auto`,
+            `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m&hourly=temperature_2m&daily=sunrise,sunset&timezone=auto`
           );
 
           const weatherData = await response.json();
@@ -331,7 +381,7 @@ export async function POST(request: Request) {
         try {
           const responseMessagesWithoutIncompleteToolCalls =
             sanitizeResponseMessages(responseMessages);
-
+          console.log('WTF', responseMessagesWithoutIncompleteToolCalls);
           await saveMessages({
             messages: responseMessagesWithoutIncompleteToolCalls.map(
               (message) => {
@@ -350,7 +400,7 @@ export async function POST(request: Request) {
                   content: message.content,
                   createdAt: new Date(),
                 };
-              },
+              }
             ),
           });
         } catch (error) {
