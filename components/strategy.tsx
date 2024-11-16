@@ -9,7 +9,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Skeleton } from "./ui/skeleton";
 import { Loader2 } from "lucide-react";
 
 // Function to generate a URL for protocol icons
@@ -18,10 +17,8 @@ export const getProtocolIcon = (protocolName: string): string => {
     console.warn(
       "Protocol name is undefined or empty. Returning default icon."
     );
-    return "/fallback-icon.png"; // Fallback icon for undefined protocol names
+    return "/fallback-icon.png";
   }
-
-  // Convert protocol name to lowercase and remove spaces
   const formattedName = protocolName.toLowerCase().replace(/\s+/g, "-");
   return `https://icons.llamao.fi/icons/protocols/${formattedName}`;
 };
@@ -30,10 +27,8 @@ export const getProtocolIcon = (protocolName: string): string => {
 export const getChainIcon = (chainName: string): string => {
   if (!chainName) {
     console.warn("Chain name is undefined or empty. Returning default icon.");
-    return "/fallback-icon.png"; // Fallback icon for undefined chain names
+    return "/fallback-icon.png";
   }
-
-  // Convert chain name to lowercase and remove spaces
   const formattedName = chainName.toLowerCase().replace(/\s+/g, "-");
   return `https://icons.llamao.fi/icons/chains/rsz_${formattedName}`;
 };
@@ -43,7 +38,7 @@ export const handleImageError = (
   event: React.SyntheticEvent<HTMLImageElement, Event>
 ) => {
   const img = event.target as HTMLImageElement;
-  img.src = "/fallback-icon.png"; // Make sure to add a fallback icon in your public folder
+  img.src = "/fallback-icon.png";
 };
 
 export default function Strategy({
@@ -82,7 +77,6 @@ export default function Strategy({
           : "grid-cols-4"
       }`}
     >
-      {" "}
       {strategies.map((strategy, index) => (
         <Card key={index} className="flex flex-col justify-between">
           <CardHeader>
@@ -106,15 +100,19 @@ export default function Strategy({
           <CardContent>
             <div className="mb-2 text-sm">
               <div className="font-medium">{strategy.pool}</div>
-              <div>{formatCurrency((totalAmount / strategy.amount) * 100)}</div>
+              <div>{formatCurrency(strategy.amount)}</div>
             </div>
             <Progress
-              value={(strategy.amount / totalAmount) * 100}
+              value={
+                totalAmount > 0 ? (strategy.amount / totalAmount) * 100 : 0
+              }
               className="h-2"
             />
             <p className="mt-2 text-xs text-muted-foreground">
-              {((strategy.amount / totalAmount) * 100).toFixed(1)}% of total
-              investment
+              {totalAmount > 0
+                ? ((strategy.amount / totalAmount) * 100).toFixed(1)
+                : 0}
+              % of total investment
             </p>
           </CardContent>
         </Card>

@@ -1,18 +1,18 @@
 /* eslint-disable */
 
-import { FarmCategories, InvestmentRiskLevel } from '../schemas';
+import { FarmCategories, InvestmentRiskLevel } from "../schemas";
 
 interface WebhookRequestBody {
   headers: {
-    'content-transfer-encoding': string;
-    'user-agent': string;
+    "content-transfer-encoding": string;
+    "user-agent": string;
     accept: string;
-    'postman-token': string;
+    "postman-token": string;
     host: string;
-    'accept-encoding': string;
+    "accept-encoding": string;
     connection: string;
-    'content-type': string;
-    'content-length': string;
+    "content-type": string;
+    "content-length": string;
   };
   params: Record<string, never>;
   query: Record<string, never>;
@@ -77,10 +77,10 @@ async function retryFetch(
 
     return response;
   } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      console.log('Request timed out');
+    if (error instanceof Error && error.name === "AbortError") {
+      console.log("Request timed out");
       if (retryCount < MAX_RETRIES) {
-        console.log('Retrying...');
+        console.log("Retrying...");
         return retryFetch(url, options, retryCount + 1);
       }
     }
@@ -104,16 +104,16 @@ export async function generateInvestmentAdviceWebhook({
   const webhookPayload: WebhookRequestBody[] = [
     {
       headers: {
-        'content-transfer-encoding': 'application/json',
-        'user-agent': 'PostmanRuntime/7.42.0',
-        accept: '*/*',
-        'postman-token': '034e79cf-ed58-4808-b6be-f5790bcaab16',
-        host: 'rag.defibuilder.com:5678',
-        'accept-encoding': 'gzip, deflate, br',
-        connection: 'keep-alive',
-        'content-type':
-          'multipart/form-data; boundary=--------------------------164951995062469606115444',
-        'content-length': '532',
+        "content-transfer-encoding": "application/json",
+        "user-agent": "PostmanRuntime/7.42.0",
+        accept: "*/*",
+        "postman-token": "034e79cf-ed58-4808-b6be-f5790bcaab16",
+        host: "rag.defibuilder.com:5678",
+        "accept-encoding": "gzip, deflate, br",
+        connection: "keep-alive",
+        "content-type":
+          "multipart/form-data; boundary=--------------------------164951995062469606115444",
+        "content-length": "532",
       },
       params: {},
       query: {},
@@ -126,25 +126,25 @@ export async function generateInvestmentAdviceWebhook({
       },
       webhookUrl:
         process.env.WEBHOOK_URL ??
-        'http://rag.defibuilder.com:5678/webhook/9a5ceb5e-5f1c-480f-bb39-1a194f991050',
-      executionMode: 'test',
+        "http://rag.defibuilder.com:5678/webhook-test/9a5ceb5e-5f1c-480f-bb39-1a194f991050",
+      executionMode: "test",
     },
   ];
 
   try {
     console.log(
-      'Sending webhook request with payload:',
+      "Sending webhook request with payload:",
       JSON.stringify(webhookPayload, null, 2)
     );
 
     if (!webhookPayload[0] || !webhookPayload[0].webhookUrl) {
-      throw new Error('Webhook URL is undefined');
+      throw new Error("Webhook URL is undefined");
     }
 
     const response = await retryFetch(webhookPayload[0].webhookUrl, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(webhookPayload),
     });
@@ -153,54 +153,54 @@ export async function generateInvestmentAdviceWebhook({
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    console.log('Webhook response received');
+    console.log("Webhook response received");
     const data = await response.json();
-    console.log('Parsed response:', JSON.stringify(data, null, 2));
+    console.log("Parsed response:", JSON.stringify(data, null, 2));
 
     // If the response is empty or doesn't contain investments, return a default structure
     // Using optional chaining for better readability
     if (!data?.investments?.length) {
-      console.log('Invalid response format, using fallback data');
+      console.log("Invalid response format, using fallback data");
       return [
         {
-          chain: 'ethereum',
-          protocol: 'Aave',
-          pool: 'USDC Lending',
+          chain: "ethereum",
+          protocol: "Aave",
+          pool: "USDC Lending",
           APR: 5.5,
           amount: amount * 0.5,
         },
         {
-          chain: 'polygon',
-          protocol: 'Curve',
-          pool: '3pool',
+          chain: "polygon",
+          protocol: "Curve",
+          pool: "3pool",
           APR: 4.2,
           amount: amount * 0.5,
         },
       ];
     }
     return data.investments.map((investment: any) => ({
-      chain: investment.chain || 'ethereum',
-      protocol: investment.protocol || 'Unknown Protocol',
-      pool: investment.pool || 'Default Pool',
+      chain: investment.chain || "ethereum",
+      protocol: investment.protocol || "Unknown Protocol",
+      pool: investment.pool || "Default Pool",
       APR: Number(investment.apr) || 0,
       amount: (Number(investment.allocation) || 0.5) * amount,
     }));
   } catch (error) {
-    console.error('Error calling webhook:', error);
+    console.error("Error calling webhook:", error);
     // Return fallback data in case of error
-    console.log('Error occurred, using fallback data');
+    console.log("Error occurred, using fallback data");
     return [
       {
-        chain: 'ethereum',
-        protocol: 'Aave',
-        pool: 'USDC Lending',
+        chain: "ethereum",
+        protocol: "Aave",
+        pool: "USDC Lending",
         APR: 5.5,
         amount: amount * 0.5,
       },
       {
-        chain: 'polygon',
-        protocol: 'Curve',
-        pool: '3pool',
+        chain: "polygon",
+        protocol: "Curve",
+        pool: "3pool",
         APR: 4.2,
         amount: amount * 0.5,
       },
