@@ -3,6 +3,7 @@
 import type { User } from 'next-auth';
 import { useRouter } from 'next/navigation';
 
+import LogoWhite from '@/public/images/logo-white.png';
 import { PlusIcon } from '@/components/icons';
 import { SidebarHistory } from '@/components/sidebar-history';
 import { SidebarUserNav } from '@/components/sidebar-user-nav';
@@ -19,32 +20,32 @@ import {
 } from '@/components/ui/sidebar';
 import { BetterTooltip } from '@/components/ui/tooltip';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export function AppSidebar({ user }: { user: User | undefined }) {
   const router = useRouter();
   const { setOpenMobile } = useSidebar();
 
   return (
-    <Sidebar className="group-data-[side=left]:border-r-0">
+    <Sidebar className='group-data-[side=left]:border-r-0'>
       <SidebarHeader>
         <SidebarMenu>
-          <div className="flex flex-row justify-between items-center">
+          <div className='flex flex-row justify-between items-center'>
             <Link
-              href="/"
+              href='/'
               onClick={() => {
                 setOpenMobile(false);
               }}
-              className="flex flex-row gap-3 items-center"
+              className='flex flex-row gap-3 items-center'
             >
-              <span className="text-lg font-semibold px-2 hover:bg-muted rounded-md cursor-pointer">
-                Chatbot
-              </span>
+              <Image src={LogoWhite} alt='logo' width={180} height={40} />
             </Link>
-            <BetterTooltip content="New Chat" align="start">
+
+            <BetterTooltip content='New Chat' align='start'>
               <Button
-                variant="ghost"
-                type="button"
-                className="p-2 h-fit"
+                variant='ghost'
+                type='button'
+                className='p-2 h-fit'
                 onClick={() => {
                   setOpenMobile(false);
                   router.push('/');
@@ -58,11 +59,11 @@ export function AppSidebar({ user }: { user: User | undefined }) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup className="-mx-2">
+        <SidebarGroup className='-mx-2'>
           <SidebarHistory user={user} />
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="gap-0 -mx-2">
+      <SidebarFooter className='gap-0 -mx-2'>
         {user && (
           <SidebarGroup>
             <SidebarGroupContent>

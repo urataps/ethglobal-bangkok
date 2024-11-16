@@ -28,7 +28,7 @@ import {
 } from '@/lib/utils';
 
 import { generateTitleFromUserMessage } from '../../actions';
-import { FarmCategories, InvestmentRiskLevel } from '@/lib/schemas';
+import { FarmCategories } from '@/lib/schemas';
 import { generateInvestmentAdviceWebhook } from '@/lib/ai/custom-agent';
 
 export const maxDuration = 60;

@@ -1,6 +1,6 @@
-import { type LucideIcon } from "lucide-react";
-import { Key } from "react";
-import { z } from "zod";
+import { type LucideIcon } from 'lucide-react';
+import { Key } from 'react';
+import { z } from 'zod';
 
 export type StrategyResult = {
   chain: string;
@@ -11,11 +11,11 @@ export type StrategyResult = {
 };
 
 export enum InvestmentRiskLevel {
-  LOW = "Low Risk",
-  AVERAGE = "Average Risk",
-  MEDIUM = "Medium Risk",
-  HIGH = "Hight Risk",
-  Degen = "Degen Risk",
+  LOW = 'Low Risk',
+  AVERAGE = 'Average Risk',
+  MEDIUM = 'Medium Risk',
+  HIGH = 'Hight Risk',
+  Degen = 'Degen Risk',
 }
 
 export type InvestmentInfo = {
@@ -121,13 +121,13 @@ export const investmentInfoSchema = z.object({
   value: z.union([z.number(), z.string(), z.date(), z.undefined()]),
 });
 export enum FarmCategories {
-  ARTIFICIAL_INTELLIGENCE = "Artificial Intelligence",
-  R_W_A = "RWA",
-  DE_PIN = "DePin",
-  BORROWING_LENDING = "Borrowing/Lending",
-  STABLE_COINS = "Stable Coins",
-  MEME_FINANCE = "Meme Finance",
-  RESTAKING_PROTOCOLS = "Restaking Protocols",
+  ARTIFICIAL_INTELLIGENCE = 'Artificial Intelligence',
+  R_W_A = 'RWA',
+  DE_PIN = 'DePin',
+  BORROWING_LENDING = 'Borrowing/Lending',
+  STABLE_COINS = 'Stable Coins',
+  MEME_FINANCE = 'Meme Finance',
+  RESTAKING_PROTOCOLS = 'Restaking Protocols',
 }
 
 export const investmentSchema = z.object({
