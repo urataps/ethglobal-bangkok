@@ -98,24 +98,6 @@ export async function generateInvestmentAdviceWebhook({
   amount: number;
   time: number;
 }) {
-  // Convert risk level to a numeric value
-  const riskValue = (() => {
-    switch (risk) {
-      case 'Low Risk':
-        return '20';
-      case 'Average Risk':
-        return '40';
-      case 'Medium Risk':
-        return '60';
-      case 'Hight Risk':
-        return '80';
-      case 'Degen Risk':
-        return '100';
-      default:
-        return '50';
-    }
-  })();
-
   const webhookPayload: WebhookRequestBody[] = [
     {
       headers: {
@@ -134,7 +116,7 @@ export async function generateInvestmentAdviceWebhook({
       query: {},
       body: {
         category: categories,
-        risk: riskValue,
+        risk: risk.toString(),
         amount: amount.toString(),
         timeframe: `${time} months`,
       },

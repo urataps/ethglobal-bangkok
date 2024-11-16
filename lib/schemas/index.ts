@@ -2,6 +2,14 @@ import { type LucideIcon } from 'lucide-react';
 import { Key } from 'react';
 import { z } from 'zod';
 
+export type StrategyResult = {
+  chain: string;
+  protocol: string;
+  pool: string;
+  APR: number;
+  amount: number;
+};
+
 export enum InvestmentRiskLevel {
   LOW = 'Low Risk',
   AVERAGE = 'Average Risk',

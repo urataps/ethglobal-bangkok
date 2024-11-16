@@ -108,22 +108,18 @@ export async function POST(request: Request) {
       getStrategies: {
         description: 'Get investment strategies',
         parameters: z.object({
-          categories: z.enum([
-            FarmCategories.ARTIFICIAL_INTELLIGENCE,
-            FarmCategories.BORROWING_LENDING,
-            FarmCategories.DE_PIN,
-            FarmCategories.MEME_FINANCE,
-            FarmCategories.RESTAKING_PROTOCOLS,
-            FarmCategories.R_W_A,
-            FarmCategories.STABLE_COINS,
-          ]),
-          risk: z.enum([
-            InvestmentRiskLevel.LOW,
-            InvestmentRiskLevel.AVERAGE,
-            InvestmentRiskLevel.MEDIUM,
-            InvestmentRiskLevel.HIGH,
-            InvestmentRiskLevel.Degen,
-          ]),
+          categories: z.array(
+            z
+              .string()
+              .describe(
+                'Categories of tokens suck as AI, R.W.As, Memecoins, Stablecoins, DePIN and others.'
+              )
+          ),
+          risk: z
+            .number()
+            .describe(
+              'Risk level from 0 being the lowest and 100 being the highest.'
+            ),
           amount: z.number(),
           investmentTimelineInMonths: z.number(),
         }),
@@ -134,7 +130,7 @@ export async function POST(request: Request) {
           investmentTimelineInMonths,
         }) => {
           const strategies = await generateInvestmentAdviceWebhook({
-            categories: [categories],
+            categories,
             risk,
             amount,
             time: investmentTimelineInMonths,
@@ -381,7 +377,6 @@ export async function POST(request: Request) {
         try {
           const responseMessagesWithoutIncompleteToolCalls =
             sanitizeResponseMessages(responseMessages);
-          console.log('WTF', responseMessagesWithoutIncompleteToolCalls);
           await saveMessages({
             messages: responseMessagesWithoutIncompleteToolCalls.map(
               (message) => {
