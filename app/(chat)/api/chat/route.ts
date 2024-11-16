@@ -108,9 +108,20 @@ export async function POST(request: Request) {
       getStrategies: {
         description: 'Get investment strategies',
         parameters: z.object({
+          chains: z
+            .array(z.enum(['Ethereum', 'Base', 'Polygon', 'Scroll']))
+            .describe('The chains to filter strategies from'),
           categories: z.array(
             z
-              .string()
+              .enum([
+                FarmCategories.ARTIFICIAL_INTELLIGENCE,
+                FarmCategories.BORROWING_LENDING,
+                FarmCategories.MEME_FINANCE,
+                FarmCategories.MEME_FINANCE,
+                FarmCategories.RESTAKING_PROTOCOLS,
+                FarmCategories.R_W_A,
+                FarmCategories.STABLE_COINS,
+              ])
               .describe(
                 'Categories of tokens suck as AI, R.W.As, Memecoins, Stablecoins, DePIN and others.'
               )
@@ -124,12 +135,14 @@ export async function POST(request: Request) {
           investmentTimelineInMonths: z.number(),
         }),
         execute: async ({
+          chains,
           categories,
           risk,
           amount,
           investmentTimelineInMonths,
         }) => {
           const strategies = await generateInvestmentAdviceWebhook({
+            chains,
             categories,
             risk,
             amount,

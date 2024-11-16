@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from './ui/skeleton';
+import { Loader2 } from 'lucide-react';
 
 export default function Strategy({
   strategies,
@@ -18,7 +19,7 @@ export default function Strategy({
 }) {
   if (!strategies || !Array.isArray(strategies)) {
     console.log('STRATEGY', strategies);
-    return <Skeleton className='h-10 w-full' />;
+    return <Loader2 className='animate-spin' />;
   }
 
   const totalAmount = strategies.reduce(

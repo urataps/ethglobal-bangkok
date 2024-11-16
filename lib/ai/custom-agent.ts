@@ -17,7 +17,8 @@ interface WebhookRequestBody {
   params: Record<string, never>;
   query: Record<string, never>;
   body: {
-    category: any[];
+    chains: string[];
+    category: string[];
     risk: string;
     amount: string;
     timeframe: string;
@@ -88,13 +89,15 @@ async function retryFetch(
 }
 
 export async function generateInvestmentAdviceWebhook({
+  chains,
   categories,
   risk,
   amount,
   time,
 }: {
-  categories: FarmCategories[];
-  risk: InvestmentRiskLevel;
+  chains: string[];
+  categories: string[];
+  risk: number;
   amount: number;
   time: number;
 }) {
@@ -115,6 +118,7 @@ export async function generateInvestmentAdviceWebhook({
       params: {},
       query: {},
       body: {
+        chains,
         category: categories,
         risk: risk.toString(),
         amount: amount.toString(),
@@ -122,7 +126,7 @@ export async function generateInvestmentAdviceWebhook({
       },
       webhookUrl:
         process.env.WEBHOOK_URL ??
-        'http://rag.defibuilder.com:5678/webhook/8f7267c6-a958-4b5a-8252-ab3d87f7ba79',
+        'http://rag.defibuilder.com:5678/webhook/9a5ceb5e-5f1c-480f-bb39-1a194f991050',
       executionMode: 'test',
     },
   ];
