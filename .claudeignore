@@ -1,0 +1,13 @@
+.git/
+.github/
+MainCore.Test/
+.gitignore
+*.lock
+*.png
+*.jpg
+*.jpeg
+node_modules/
+.env
+*.jsoncla
+.next/
+.public/
