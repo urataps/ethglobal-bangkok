@@ -126,7 +126,7 @@ export async function generateInvestmentAdviceWebhook({
       },
       webhookUrl:
         process.env.WEBHOOK_URL ??
-        "http://rag.defibuilder.com:5678/webhook-test/9a5ceb5e-5f1c-480f-bb39-1a194f991050",
+        "http://rag.defibuilder.com:5678/webhook/9a5ceb5e-5f1c-480f-bb39-1a194f991050",
       executionMode: "test",
     },
   ];
@@ -183,7 +183,7 @@ export async function generateInvestmentAdviceWebhook({
       protocol: investment.protocol || "Unknown Protocol",
       pool: investment.pool || "Default Pool",
       APR: Number(investment.apr) || 0,
-      amount: (Number(investment.allocation) || 0.5) * amount,
+      amount: Number(investment.amount) || 0,
     }));
   } catch (error) {
     console.error("Error calling webhook:", error);

@@ -23,16 +23,6 @@ export const getProtocolIcon = (protocolName: string): string => {
   return `https://icons.llamao.fi/icons/protocols/${formattedName}`;
 };
 
-// Function to generate a URL for chain icons
-export const getChainIcon = (chainName: string): string => {
-  if (!chainName) {
-    console.warn("Chain name is undefined or empty. Returning default icon.");
-    return "/fallback-icon.png";
-  }
-  const formattedName = chainName.toLowerCase().replace(/\s+/g, "-");
-  return `https://icons.llamao.fi/icons/chains/rsz_${formattedName}`;
-};
-
 // Function to handle image loading errors
 export const handleImageError = (
   event: React.SyntheticEvent<HTMLImageElement, Event>
@@ -42,75 +32,76 @@ export const handleImageError = (
 };
 
 export default function Strategy({
-  strategies,
+  investments,
 }: {
-  strategies: StrategyResult[];
+  investments: StrategyResult[];
 }) {
-  if (!strategies || !Array.isArray(strategies)) {
-    console.log("STRATEGY", strategies);
+  if (!investments || !Array.isArray(investments) || investments.length === 0) {
+    console.log("STRATEGY", investments);
     return <Loader2 className="animate-spin" />;
   }
 
-  const totalAmount = strategies.reduce(
-    (sum, strategy) => sum + strategy.amount,
+  // Calculate the total investment amount
+  const totalAmount = investments.reduce(
+    (sum, investment) => sum + (investment?.amount || 0),
     0
   );
 
+  // Format amount as currency
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(amount);
   };
 
   return (
-    <div
-      className={`grid gap-4 ${
-        strategies.length === 1
-          ? "grid-cols-1"
-          : strategies.length === 2
-          ? "grid-cols-2"
-          : strategies.length === 3
-          ? "grid-cols-3"
-          : "grid-cols-4"
-      }`}
-    >
-      {strategies.map((strategy, index) => (
+    <div className={`grid gap-4 grid-cols-2`}>
+      {investments.map((investment, index) => (
         <Card key={index} className="flex flex-col justify-between">
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span className="flex items-center">
                 <img
-                  src={getProtocolIcon(strategy.protocol)}
-                  alt={`${strategy.protocol} icon`}
+                  src={getProtocolIcon(investment?.protocol || "")}
+                  alt={`${investment?.protocol || "Unknown"} icon`}
                   onError={handleImageError}
                   className="w-6 h-6 mr-2"
                 />
-                {strategy.protocol.charAt(0).toUpperCase() +
-                  strategy.protocol.slice(1)}
+                {(investment?.protocol || "Unknown").charAt(0).toUpperCase() +
+                  (investment?.protocol || "Unknown").slice(1)}
               </span>
               <span className="text-2xl font-bold text-green-600">
-                {strategy.APR.toFixed(2)}%
+                {typeof investment?.APR === "number"
+                  ? investment.APR.toFixed(2)
+                  : "N/A"}
+                %
               </span>
             </CardTitle>
-            <CardDescription>{strategy.chain} Chain</CardDescription>
+            <CardDescription>
+              {investment?.chain || "Unknown"} Chain
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="mb-2 text-sm">
-              <div className="font-medium">{strategy.pool}</div>
-              <div>{formatCurrency(strategy.amount)}</div>
+              <div className="font-medium">{investment?.pool || "Unknown"}</div>
+              <div>{formatCurrency(investment?.amount || 0)}</div>
             </div>
             <Progress
               value={
-                totalAmount > 0 ? (strategy.amount / totalAmount) * 100 : 0
+                totalAmount > 0 && investment?.amount
+                  ? parseFloat(
+                      ((investment.amount / totalAmount) * 100).toFixed(1)
+                    )
+                  : 0.0
               }
               className="h-2"
             />
             <p className="mt-2 text-xs text-muted-foreground">
-              {totalAmount > 0
-                ? ((strategy.amount / totalAmount) * 100).toFixed(1)
+              {totalAmount > 0 && investment?.amount
+                ? ((investment.amount / totalAmount) * 100).toFixed(1)
                 : 0}
               % of total investment
             </p>
