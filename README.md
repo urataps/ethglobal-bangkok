@@ -2,7 +2,7 @@
 
 A sophisticated DeFi investment platform that leverages artificial intelligence and multi-agent systems to provide personalized yield farming strategies across the DeFi ecosystem.
 
-![Yield Vision Banner](public/images/logo-white.png)
+![Yield Vision Banner](public/images/banner.png)
 
 ## 🚀 Key Features
 
