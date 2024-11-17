@@ -62,7 +62,10 @@ export default function Strategy({
   return (
     <div className={`grid gap-4 grid-cols-2`}>
       {investments.map((investment, index) => (
-        <Card key={index} className='flex flex-col justify-between'>
+        <Card
+          key={`${investment.protocol}-${index}`}
+          className='flex flex-col justify-between'
+        >
           <CardHeader>
             <CardTitle className='flex items-center justify-between'>
               <span className='flex items-center'>
@@ -94,7 +97,7 @@ export default function Strategy({
             <Progress
               value={
                 totalAmount > 0 && investment?.amount
-                  ? parseFloat(
+                  ? Number.parseFloat(
                       ((investment.amount / totalAmount) * 100).toFixed(1)
                     )
                   : 0.0

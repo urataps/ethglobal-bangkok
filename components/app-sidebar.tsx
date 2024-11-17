@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import LogoWhite from '@/public/images/logo-white.png';
 import { PlusIcon } from '@/components/icons';
 import { SidebarHistory } from '@/components/sidebar-history';
-import { SidebarUserNav } from '@/components/sidebar-user-nav';
 import { Button } from '@/components/ui/button';
 import {
   Sidebar,

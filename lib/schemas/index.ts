@@ -1,5 +1,5 @@
-import { type LucideIcon } from 'lucide-react';
-import { Key } from 'react';
+import type { LucideIcon } from 'lucide-react';
+import type { Key } from 'react';
 import { z } from 'zod';
 
 export type StrategyResult = {

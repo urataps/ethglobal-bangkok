@@ -18,7 +18,7 @@ import Strategy from './strategy';
 import { Button } from './ui/button';
 import { createWalletClient, custom, parseEther } from 'viem';
 import { baseSepolia } from 'viem/chains';
-import { IEthereum } from '@dynamic-labs/ethereum';
+import type { IEthereum } from '@dynamic-labs/ethereum';
 import { toast } from 'sonner';
 import Link from 'next/link';
 

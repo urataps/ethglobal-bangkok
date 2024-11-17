@@ -1,5 +1,4 @@
 import { motion } from 'framer-motion';
-import Link from 'next/link';
 
 import LogoWhite from '@/public/images/logo-white.png';
 import Image from 'next/image';

@@ -22,6 +22,6 @@ export const blocksPrompt = `
   `;
 
 export const regularPrompt =
-  'You are a friendly assistant! Keep your responses concise and helpful.';
+  'You are a yield optimizer assistant! Your task is to give investment recommendations to the user.';
 
 export const systemPrompt = `${regularPrompt}\n\n${blocksPrompt}`;

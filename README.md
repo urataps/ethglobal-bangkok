@@ -66,8 +66,6 @@ Comprehensive protocol assessment based on:
 - Transaction monitoring
 - Gas optimization recommendations
 
-[Previous README content up to Quick Start...]
-
 ## 🏆 ETHGlobal Bangkok 2024
 
 Yield Vision was developed during ETHGlobal Bangkok 2024, showcasing innovative integrations with leading blockchain protocols and tools:
@@ -147,19 +145,18 @@ Yield Vision was developed during ETHGlobal Bangkok 2024, showcasing innovative 
 
 - **Frontend**: Next.js 14, React, TailwindCSS
 - **Backend**: Node.js, TypeScript
-- **AI Infrastructure**: LLAMA 3.1, RAG System
+- **AI Infrastructure**: LLAMA 3.1, RAG System, Vercel AI SDK
 - **Databases**:
   - Qdrant (Vector Storage)
   - Pinecone (Vector Search)
   - PostgreSQL (Relational Data)
-- **Blockchain Integration**: Web3.js, Ethers.js
-- **Authentication**: Dynamic Labs SDK
+- **Blockchain Integration**: Web3.js, Ethers.js, Dynamic
 
 ## 📦 Installation
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/yield-vision
+git clone https://github.com/urataps/ethglobal-bangkok
 
 # Install dependencies
 npm install
@@ -173,7 +170,7 @@ npm run dev
 
 ## 🚀 Quick Start
 
-1. Connect your wallet using the Dynamic Labs integration
+1. Connect your wallet using the dynamic.xyz integration
 2. Complete the investment preference assessment
 3. Review AI-generated strategy recommendations
 4. Select your preferred investment opportunities
