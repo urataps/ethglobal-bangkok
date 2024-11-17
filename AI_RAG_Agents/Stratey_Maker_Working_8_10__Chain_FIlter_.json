@@ -1,0 +1,1472 @@
+{
+  "name": "Stratey_Maker_Working 8/10 [Chain FIlter]",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Tool to Defillama Pool to Vector DB",
+        "height": 1362.1679910941352,
+        "width": 1606.9207687035914,
+        "color": 5
+      },
+      "id": "1b114286-532f-4898-b5f3-d0cad7d1a628",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        460,
+        940
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "id": "0165b7dc-dec9-448d-b891-9c4db3a037a5",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        520,
+        1420
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "chunkSize": 600,
+        "options": {}
+      },
+      "id": "3a8089cb-ca85-455b-b548-c4a128fe6ca5",
+      "name": "Recursive Character Text Splitter",
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        1920,
+        1700
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.llama.fi/protocols",
+        "options": {}
+      },
+      "id": "bc160030-53fa-4d94-a128-7f66b4628e34",
+      "name": "Fetching Protocol",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        780,
+        1240
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a4670626-ce62-4ca2-9673-13ca4ef609a1",
+              "leftValue": "={{ $json.category }}",
+              "rightValue": "CEX",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "63bab825-4dfe-4ef0-bb6d-39dee1bbd085",
+      "name": "Filter",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        980,
+        1240
+      ]
+    },
+    {
+      "parameters": {
+        "model": "nomic-embed-text:latest"
+      },
+      "id": "7206e303-d7e1-4a7f-be5b-1fb06becc8ec",
+      "name": "Embeddings Ollama",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [
+        1660,
+        1580
+      ],
+      "credentials": {
+        "ollamaApi": {
+          "id": "jqcEGGsgA2Xk8BfC",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Helper Functions\nfunction calculateRiskLevel(protocol) {\n  let score = 0;\n  \n  // TVL scoring with null check\n  const tvl = protocol?.tvl || 0;\n  if (tvl >= 1e9) score += 0;\n  else if (tvl >= 1e8) score += 1;\n  else if (tvl >= 1e7) score += 2;\n  else score += 3;\n  \n  // Audit scoring with null check\n  const auditCount = parseInt(protocol?.audits || '0');\n  if (auditCount === 0) score += 3;\n  else if (auditCount === 1) score += 1;\n  \n  // Age scoring with null check\n  if (protocol?.listedAt) {\n    const ageInDays = (Date.now()/1000 - protocol.listedAt) / (24 * 60 * 60);\n    if (ageInDays < 365) score += 1;\n  } else {\n    score += 1;\n  }\n  \n  // Volatility scoring with null check\n  const volatility = Math.abs(protocol?.change_7d || 0);\n  if (volatility > 20) score += 2;\n  else if (volatility > 10) score += 1;\n  \n  return score <= 2 ? \"low\" : score <= 4 ? \"medium\" : \"high\";\n}\n\nfunction getTVLRange(tvl) {\n  if (!tvl) return \"sub_10m\";\n  if (tvl >= 1e9) return \"1b_plus\";\n  if (tvl >= 1e8) return \"100m_1b\";\n  if (tvl >= 1e7) return \"10m_100m\";\n  return \"sub_10m\";\n}\n\nfunction formatLargeNumber(num) {\n  if (!num || isNaN(num)) return \"$0\";\n  if (num >= 1e9) return `$${(num/1e9).toFixed(2)} billion`;\n  if (num >= 1e6) return `$${(num/1e6).toFixed(2)} million`;\n  return `$${num.toFixed(2)}`;\n}\n\nfunction createNaturalDescription(protocol) {\n  if (!protocol) return \"\";\n  const parts = [];\n  \n  // Introduction with name and category\n  if (protocol.name && protocol.category) {\n    parts.push(`${protocol.name} is a ${protocol.category} protocol`);\n  }\n  \n  // Chain distribution with null checks\n  const chains = protocol.chains || [];\n  if (chains.length > 0) {\n    const primaryChain = chains[0];\n    if (chains.length > 1) {\n      const otherChains = chains.slice(1);\n      parts.push(`operating primarily on ${primaryChain}${otherChains.length > 0 ? ` and deployed across ${otherChains.join(', ')}` : ''}`);\n    } else {\n      parts.push(`operating exclusively on ${primaryChain}`);\n    }\n  }\n  \n  // Protocol description with null check\n  if (protocol.description) {\n    parts.push(protocol.description.trim());\n  }\n  \n  // TVL and market metrics with null checks\n  if (protocol.tvl) {\n    const tvlFormatted = formatLargeNumber(protocol.tvl);\n    parts.push(`The protocol manages ${tvlFormatted} in Total Value Locked (TVL)`);\n  }\n  \n  if (protocol.mcap) {\n    const mcapFormatted = formatLargeNumber(protocol.mcap);\n    parts.push(`with a market cap of ${mcapFormatted}`);\n  }\n  \n  // Security and audits with null check\n  const auditCount = parseInt(protocol.audits || '0');\n  if (auditCount > 0) {\n    parts.push(`has undergone ${auditCount} security audit${auditCount > 1 ? 's' : ''}`);\n  }\n  \n  // Protocol features with null checks\n  const features = [];\n  if (protocol.openSource) features.push('open-source');\n  if (protocol.symbol) features.push('has a governance token');\n  if (features.length > 0) {\n    parts.push(`is ${features.join(' and ')}`);\n  }\n  \n  // Performance metrics with null checks\n  if (protocol.change_7d != null) {\n    const change = protocol.change_7d;\n    const direction = change > 0 ? 'increased' : 'decreased';\n    parts.push(`has shown a ${Math.abs(change).toFixed(1)}% ${direction} in TVL over the past week`);\n  }\n  \n  // Join all parts with proper punctuation, handle empty case\n  return parts.length > 0 ? parts.join('. ') + '.' : 'No description available.';\n}\n\n// Enhanced metadata processing with null checks\nfunction createEnhancedMetadata(protocol) {\n  if (!protocol) return null;\n  \n  return {\n    // Core identifiers\n    protocol_id: protocol.id || 'unknown',\n    name: protocol.name || 'unknown',\n    category: protocol.output || 'unknown',\n    \n    // Risk and security metrics\n    risk_level: calculateRiskLevel(protocol),\n    audit_count: parseInt(protocol.audits || '0'),\n    is_audited: parseInt(protocol.audits || '0') > 0,\n    \n    // Financial metrics\n    tvl: protocol.tvl || 0,\n    tvl_range: getTVLRange(protocol.tvl),\n    mcap: protocol.mcap || null,\n    mcap_tvl_ratio: protocol.mcap && protocol.tvl ? (protocol.mcap / protocol.tvl) : null,\n    volatility_7d: protocol.change_7d || 0,\n    \n    // Chain data\n    chains: protocol.chains || [],\n    chain_count: (protocol.chains || []).length,\n    primary_chain: (protocol.chains || [])[0] || null,\n    \n    // Protocol features\n    has_governance_token: Boolean(protocol.symbol),\n    is_open_source: Boolean(protocol.openSource),\n    token_symbol: protocol.symbol || null,\n    \n    // Additional identifiers\n    gecko_id: protocol.gecko_id || null,\n    created_timestamp: protocol.listedAt || null,\n    \n    // Source tracking\n    source: \"defillama\",\n    last_updated: new Date().toISOString(),\n    \n    // Document metadata\n    source_type: \"blob\",\n    blob_type: \"text/plain\",\n    loc: {\n      lines: {\n        from: 1,\n        to: 1\n      }\n    }\n  };\n}\n\n// Process items with error handling\nconst processedItems = items\n  .map(item => {\n    try {\n      const protocol = item?.json;\n      \n      // Skip CEX protocols and null/undefined protocols\n      if (!protocol || protocol.category === 'CEX') {\n        return null;\n      }\n      \n      const metadata = createEnhancedMetadata(protocol);\n      const description = createNaturalDescription(protocol);\n      \n      // Only return if we have valid metadata and description\n      if (metadata && description) {\n        return {\n          json: {\n            data: description,\n            metadata: metadata\n          }\n        };\n      }\n      return null;\n    } catch (error) {\n      console.error('Error processing protocol:', error);\n      return null;\n    }\n  })\n  .filter(item => item !== null);\n\nreturn processedItems;"
+      },
+      "id": "8b012cbf-cc29-42ba-8a3e-6cdcbad7c68f",
+      "name": "Preparing Metadata",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1520,
+        1440
+      ]
+    },
+    {
+      "parameters": {
+        "jsonMode": "expressionData",
+        "jsonData": "={{ $json.data }}",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "protocol_id",
+                "value": "={{ $json.metadata.protocol_id }}"
+              },
+              {
+                "name": "name",
+                "value": "={{ $json.metadata.name }}"
+              },
+              {
+                "name": "category",
+                "value": "={{ $json.metadata.category }}"
+              },
+              {
+                "name": "risk_level",
+                "value": "={{ $json.metadata.risk_level }}"
+              },
+              {
+                "name": "tvl",
+                "value": "={{ $json.metadata.tvl }}"
+              },
+              {
+                "name": "tvl_range",
+                "value": "={{ $json.metadata.tvl_range }}"
+              },
+              {
+                "name": "chains",
+                "value": "={{ $json.metadata.chains }}"
+              },
+              {
+                "name": "is_audited",
+                "value": "={{ $json.metadata.is_audited }}"
+              }
+            ]
+          }
+        }
+      },
+      "id": "342822a7-39f5-4160-b395-53d348c16baa",
+      "name": "Vectorizing Data and Adding Metadata",
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1,
+      "position": [
+        1800,
+        1580
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://nearyield-protocols-d11ad6a.svc.aped-4627-b74a.pinecone.io/vectors/delete",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Api-Key",
+              "value": "pcsk_2fKEHj_LuUxxhthUL5B772gr3Ax4UuUKWx2J13Y5uebg7RWa5D1PZb5zRxYxB7GeJQLa7J"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "deleteAll",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2e3a9477-c062-4e04-ae7a-74df723226f2",
+      "name": "Delete Vectors1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        620,
+        1240
+      ],
+      "disabled": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "https://yields.llama.fi/pools",
+        "options": {}
+      },
+      "id": "27558407-9984-4b46-b0e3-da9a338bfa99",
+      "name": "Fetching Pools",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        757,
+        1760
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Helper function to determine risk level based on APY\nfunction getRiskLevel(apy) {\n  if (!apy || isNaN(apy)) return \"unknown\";\n  if (apy < 20) return \"low\";\n  if (apy <= 80) return \"medium\";\n  return \"high\";\n}\n\n// Helper function to get average APY over 30 days or fallback to current APY\nfunction getEffectiveAPY(pool) {\n  if (pool.apyMean30d) {\n    return pool.apyMean30d;\n  }\n  return pool.apy || 0;\n}\n\n// Helper function to format currency for display\nfunction formatCurrency(amount) {\n  if (!amount || isNaN(amount)) return \"$0\";\n  if (amount >= 1e9) return `$${(amount / 1e9).toFixed(2)}B`;\n  if (amount >= 1e6) return `$${(amount / 1e6).toFixed(2)}M`;\n  if (amount >= 1e3) return `$${(amount / 1e3).toFixed(2)}K`;\n  return `$${amount.toFixed(2)}`;\n}\n\n// Helper function to create a comprehensive pool description\nfunction createPoolDescription(pool, apy) {\n  const parts = [];\n  \n  // Basic pool information\n  parts.push(`${pool.project} offers a ${pool.symbol} liquidity pool on ${pool.chain}`);\n  \n  // Performance metrics\n  parts.push(`providing ${apy.toFixed(2)}% APY`);\n  if (pool.tvlUsd) {\n    parts.push(`managing ${formatCurrency(pool.tvlUsd)} in Total Value Locked`);\n  }\n  \n  // Risk and exposure\n  const riskLevel = getRiskLevel(apy);\n  parts.push(`This is classified as a ${riskLevel} risk investment`);\n  parts.push(`with ${pool.exposure} asset exposure`);\n  \n  // Pool characteristics\n  if (pool.stablecoin) {\n    parts.push(\"utilizing stablecoin pairs\");\n  }\n  \n  // Additional risk factors\n  if (pool.ilRisk === 'yes') {\n    parts.push(\"susceptible to impermanent loss\");\n  }\n  \n  // Market prediction\n  if (pool.predictions?.predictedClass) {\n    parts.push(`market analysis suggests a ${pool.predictions.predictedClass} trend`);\n    if (pool.predictions.predictedProbability) {\n      parts.push(`with ${pool.predictions.predictedProbability}% confidence`);\n    }\n  }\n\n  return parts.join(\", \") + \".\";\n}\n\n// Process pools data and prepare for vector database\nfunction processPoolsData(inputItems) {\n  return inputItems.map(item => {\n    try {\n      const pool = item.json;\n      if (!pool) return null;\n\n      const effectiveAPY = getEffectiveAPY(pool);\n      \n      const metadata = {\n        // Core identifiers\n        chain: pool.chain || 'unknown',\n        project: pool.project || 'unknown',\n        symbol: pool.symbol || 'unknown',\n        pool_id: pool.pool || 'unknown',\n        \n        // Risk assessment\n        risk_level: getRiskLevel(effectiveAPY),\n        exposure: pool.exposure || 'unknown',\n        is_stablecoin: Boolean(pool.stablecoin),\n        impermanentloss_risk: pool.ilRisk === 'yes',\n        \n        // Performance metrics\n        apy_current: pool.apy || 0,\n        apy_30d: pool.apyMean30d || 0,\n        tvl_usd: pool.tvlUsd || 0,\n        \n        // Market prediction\n        prediction: pool.predictions?.predictedClass || 'unknown',\n        prediction_confidence: pool.predictions?.binnedConfidence || 0,\n        prediction_probability: pool.predictions?.predictedProbability || 0,\n        \n        // Tracking and metadata\n        source: \"defillama\",\n        last_updated: new Date().toISOString(),\n        source_type: \"pool\",\n        content_type: \"application/json\"\n      };\n\n      return {\n        json: {\n          data: createPoolDescription(pool, effectiveAPY),\n          metadata: metadata\n        }\n      };\n    } catch (error) {\n      console.error('Error processing pool:', error);\n      return null;\n    }\n  }).filter(item => item !== null);\n}\n\n// Process the input items and return the result\nreturn processPoolsData($input.all());"
+      },
+      "id": "e66a7aaf-cf2e-419d-9af7-bac23ec80770",
+      "name": "Creating pools metadata",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1160,
+        1760
+      ]
+    },
+    {
+      "parameters": {
+        "jsonMode": "expressionData",
+        "jsonData": "={{ $json.data }}",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "chain",
+                "value": "={{ $json.metadata.chain }}"
+              },
+              {
+                "name": "project",
+                "value": "={{ $json.metadata.project }}"
+              },
+              {
+                "name": "exposure",
+                "value": "={{ $json.metadata.exposure }}"
+              },
+              {
+                "name": "prediction",
+                "value": "={{ $json.metadata.prediction }}"
+              },
+              {
+                "name": "apyavg",
+                "value": "={{ $json.metadata.apy_30d }}"
+              },
+              {
+                "name": "impermanentloss_risk",
+                "value": "={{ $json.metadata.impermanentloss_risk }}"
+              },
+              {
+                "name": "risk_level",
+                "value": "={{ $json.metadata.risk_level }}"
+              },
+              {
+                "name": "tvlusd",
+                "value": "={{ $json.metadata.tvl_usd }}"
+              }
+            ]
+          }
+        }
+      },
+      "id": "35d928aa-d6c2-4467-8580-6bd386329d2c",
+      "name": "Default Data Loader",
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1,
+      "position": [
+        1557,
+        1920
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://nearyield-pools-d11ad6a.svc.aped-4627-b74a.pinecone.io/vectors/delete",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Api-Key",
+              "value": "pcsk_2fKEHj_LuUxxhthUL5B772gr3Ax4UuUKWx2J13Y5uebg7RWa5D1PZb5zRxYxB7GeJQLa7J"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "deleteAll",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d234d5f7-06ee-46e3-aa33-ad0acb655959",
+      "name": "Delete Vectors",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        557,
+        1760
+      ],
+      "disabled": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Assume input comes from the previous node\nconst input = $input.all();\n// Initialize the response structure\nlet response = {\n  investments: []\n};\n\n// Check if input exists and has the expected structure\nif (Array.isArray(input) && input[0]?.json) {\n  let investments;\n  \n  // Handle the new AI output format\n  if (input[0]?.json?.message?.content) {\n    // Extract JSON string from markdown code block\n    const jsonString = input[0].json.message.content\n      .replace(/```json\\n/, '')  // Remove opening ```json\n      .replace(/\\n```$/, '')     // Remove closing ```\n      .trim();                   // Remove any extra whitespace\n    \n    try {\n      // Parse the JSON string into an object\n      investments = JSON.parse(jsonString);\n    } catch (error) {\n      console.log('Error parsing JSON:', error);\n      investments = [];\n    }\n  } else if (Array.isArray(input[0].json)) {\n    // Handle previous format where input is already an array\n    investments = input[0].json;\n  } else {\n    // Handle single investment object\n    investments = [input[0].json];\n  }\n\n  // Map the investments to the expected format\n  response.investments = investments.map(item => ({\n    chain: item.chain || '',\n    protocol: item.protocol || '',\n    pool: item.pool || '',\n    apr: Number(item.APR) || 0,\n    allocation: Number(item.amount) || 0\n  }));\n}\n\n// Return the properly formatted response\nreturn { json: response };"
+      },
+      "id": "820f0ca8-2f12-4b68-8765-7a17784f8830",
+      "name": "Code1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2520,
+        420
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "model": "nomic-embed-text:latest"
+      },
+      "id": "24e0d1a2-31c4-4ad1-a5fd-1271829ce058",
+      "name": "Embeddings Ollama3",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [
+        2180,
+        1160
+      ],
+      "credentials": {
+        "ollamaApi": {
+          "id": "jqcEGGsgA2Xk8BfC",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "dada2417-6de9-4258-a0f9-e8323e081d0a",
+              "name": "pooldata",
+              "value": "={{ $json.document }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "df697e02-0a8e-4f4e-93c3-b23f4b7bbc52",
+      "name": "Edit Fields1",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1600,
+        740
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Retrieve all input items\nconst allItems = $input.all();\n\n// Initialize an array to store the filtered items\nlet allData = [];\n\n// Extract the 'data' array from each input item\nallItems.forEach(item => {\n  if (item.json && item.json.data) {\n    allData = allData.concat(item.json.data);\n  }\n});\n\n// Use JMESPath to filter out objects where 'chain' is 'Solana'\nconst filteredData = $jmespath(allData, \"[?chain!='Solana']\");\n\n// Return the filtered results, each wrapped in { json: ... }\nreturn filteredData.map(item => ({ json: item }));\n"
+      },
+      "id": "87c9c035-8443-41af-8351-2ff14694aed4",
+      "name": "Filtering Out non EVM chains",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        957,
+        1760
+      ]
+    },
+    {
+      "parameters": {
+        "model": "nomic-embed-text:latest"
+      },
+      "id": "92ad2bab-3a84-4d4f-99bf-afba4d4017d6",
+      "name": "Embeddings Ollama4",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [
+        1080,
+        780
+      ],
+      "credentials": {
+        "ollamaApi": {
+          "id": "jqcEGGsgA2Xk8BfC",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chunkSize": 600,
+        "options": {}
+      },
+      "id": "ecf5af11-d0e8-432d-86e0-2e88c3125846",
+      "name": "Recursive Character Text Splitter1",
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        1560,
+        2060
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get array of objects\nconst items = $input.all();\n// Extract metadata query result (first object)\nconst metadataQueryResult = items[0].json;\n// Initialize arrays for different types of data\nconst descriptions = [];\nconst poolsData = [];\nconst poolsText = [];\n\n// Process remaining items\nitems.slice(1).forEach(item => {\n  // Process document data\n  if (item.json.document) {\n    descriptions.push(item.json.document.pageContent);\n  }\n  \n  // Process pool data\n  if (item.json.pooldata) {\n    const poolInfo = {\n      chain: item.json.pooldata.metadata.chain,\n      protocol: item.json.pooldata.metadata.project,\n      pool: item.json.pooldata.pageContent.split(' offers a ')[1]?.split(' liquidity pool')[0] || 'Unknown Pool',\n      APR: item.json.pooldata.metadata.apyavg,\n      TVL: item.json.pooldata.metadata.tvlusd,\n      risk_level: item.json.pooldata.metadata.risk_level,\n      exposure: item.json.pooldata.metadata.exposure,\n      impermanentLossRisk: item.json.pooldata.metadata.impermanentloss_risk,\n      prediction: item.json.pooldata.metadata.prediction\n    };\n    \n    poolsData.push(poolInfo);\n    \n    // Create text format for each pool\n    const poolText = `${poolInfo.protocol} operates on ${poolInfo.chain} blockchain offering ${poolInfo.pool} pool. ` +\n      `This pool currently provides an APR of ${poolInfo.APR.toFixed(2)}% with a TVL of $${poolInfo.TVL.toLocaleString()}. ` +\n      `The pool has a ${poolInfo.risk_level} risk level and ${poolInfo.prediction} market prediction. ` +\n      `${poolInfo.impermanentLossRisk ? 'There is' : 'There is no'} risk of impermanent loss.`;\n    \n    poolsText.push(poolText);\n  }\n});\n\n// Combine protocols and pools into a comprehensive prompt\nconst combinedText = `${metadataQueryResult.prompt}\nHere are some protocols that match your request:\n${descriptions.join('\\n\\n')}\n\nAvailable pools within these protocols:\n${poolsText.join('\\n\\n')}\n\nBased on the above information, which pools best match the investment criteria? Please analyze each protocol's suitability considering the risk level, TVL requirements, and category preferences.`;\n\nreturn {\n  json: {\n    prompt: combinedText,\n    originalCriteria: metadataQueryResult.prompt,\n    matchingProtocols: descriptions,\n    matchingPools: poolsText,\n    metadataValues: metadataQueryResult.metadataValues\n  }\n};"
+      },
+      "id": "0df525b0-f590-473d-be8d-73038b74b895",
+      "name": "Prompt and Context parser",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2020,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "model": "nomic-embed-text:latest"
+      },
+      "id": "7f25e09d-1f4f-445f-9342-2f59a975e107",
+      "name": "Embeddings Ollama2",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [
+        1357,
+        1920
+      ],
+      "credentials": {
+        "ollamaApi": {
+          "id": "jqcEGGsgA2Xk8BfC",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "b8336264-ef6d-471c-b7cd-55efc2853403",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2960,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "model": "nomic-embed-text:latest"
+      },
+      "id": "8ee876ac-b891-4cf7-a36c-2378e07a56d4",
+      "name": "Embeddings Ollama1",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [
+        1500,
+        500
+      ],
+      "credentials": {
+        "ollamaApi": {
+          "id": "jqcEGGsgA2Xk8BfC",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Initialize base query structure\nconst input = $input.all()[0].json;\n\n// Initialize array to hold all metadata filters\nlet metadataValues = [];\n\n// Add categories using $in operator\nif (input.categories && input.categories.length > 0) {\n  metadataValues.push({\n    name: \"category\",\n    value: { $in: input.categories }  // Using $in operator for multiple categories\n  });\n}\n\n// Add chains using $in operator\nif (input.chains && input.chains.length > 0) {\n  metadataValues.push({\n    name: \"chains\",\n    value: { $in: input.chains }  // Using $in operator for multiple chains\n  });\n}\n\n// Add risk level filters based on risk score\nif (input.risk_score) {\n  if (input.risk_score >= 70) {\n    // High risk - include both high and medium\n    metadataValues.push({\n      name: \"risk_level\",\n      value: { $in: [\"high\", \"medium\"] }\n    });\n  } else if (input.risk_score <= 30) {\n    // Low risk only\n    metadataValues.push({\n      name: \"risk_level\",\n      value: \"low\"\n    });\n  } else {\n    // Medium risk - include medium and low\n    metadataValues.push({\n      name: \"risk_level\",\n      value: { $in: [\"medium\", \"low\"] }\n    });\n  }\n}\n\n// Calculate TVL threshold based on risk\nlet tvlThreshold;\nif (input.risk_score >= 70) {\n  tvlThreshold = 10000; // High risk\n} else if (input.risk_score <= 30) {\n  tvlThreshold = 1000000; // Low risk\n} else {\n  tvlThreshold = 100000; // Medium risk\n}\n\n// Add TVL range filters\nconst tvlRanges = {\n  high: [\"sub_10m\", \"10m_100m\"],\n  medium: [\"10m_100m\", \"100m_1b\"],\n  low: [\"100m_1b\", \"1b_plus\"]\n};\n\nconst riskLevel = input.risk_score >= 70 ? \"high\" : input.risk_score <= 30 ? \"low\" : \"medium\";\nmetadataValues.push({\n  name: \"tvl_range\",\n  value: { $in: tvlRanges[riskLevel] }\n});\n\n// Add audit requirement for medium and low risk\nif (input.risk_score < 70) {\n  metadataValues.push({\n    name: \"is_audited\",\n    value: true\n  });\n}\n\n// Create human-readable prompt\nconst prompt = `Retrieve DeFi pools that match these criteria:\n- Investment amount: $${input.investment_amount}\n- Risk level: ${riskLevel}\n- Categories: ${input.categories.join(' OR ')}\n- Chains: ${input.chains.join(' OR ')}\n- Investment timeframe: ${input.timeframe}`;\n\n\nreturn {\n  json: {\n    metadataValues,\n    prompt,\n    topK: 5\n  }\n};"
+      },
+      "id": "7c6417fd-b436-49e5-ab45-a4e063d88d64",
+      "name": "Excracting Metadata Vector Query",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1056.8230689664922,
+        580
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6d4d0e9a-05a8-4a92-ab99-774bb21f6bd9",
+              "name": "risk_level",
+              "value": "={{ $json.body.risk >= 70 ? \"high\" : $json.body.risk >= 59 ? \"medium\" : \"low\" }}",
+              "type": "string"
+            },
+            {
+              "id": "a324db6d-3189-4c02-8a50-f36017776442",
+              "name": "investment_amount",
+              "value": "={{ $json.body[0].body.amount }}",
+              "type": "number"
+            },
+            {
+              "id": "4c5f8a59-fef0-45f5-b25a-c045bf40f77b",
+              "name": "categories",
+              "value": "={{ $json.body[0].body.category }}",
+              "type": "array"
+            },
+            {
+              "id": "693ff170-3c33-4ad4-bb1f-9e65a88ca1f1",
+              "name": "timeframe",
+              "value": "={{ $json.body[0].body.timeframe }}",
+              "type": "string"
+            },
+            {
+              "id": "ddbb5dcc-9b60-4990-b1c8-66671c1f9823",
+              "name": "risk_score",
+              "value": "={{ $json.body[0].body.risk }}",
+              "type": "number"
+            },
+            {
+              "id": "ccd1c22f-8067-4a5e-a2a0-291f55ae3bf3",
+              "name": "chains",
+              "value": "={{ $json.body[0].body.chains}}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "11436309-bc31-4701-878f-3f53e1050ccc",
+      "name": "Edit Fields",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        796.8230689664922,
+        580
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## RAG AI Agent with Chat Interface",
+        "height": 594.4845331832514,
+        "width": 1605.752929868916
+      },
+      "id": "1d24db78-9b94-4d51-b134-084938d93102",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        460,
+        330.318186147146
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Agent Tools for RAG",
+        "height": 927.7849148645166,
+        "width": 1109.1835651460185,
+        "color": 4
+      },
+      "id": "e68e3813-81dd-4e61-9352-74cb35024d6a",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2076.8230689664924,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c04a1611-3700-42cb-97ab-79e0927c6f7d",
+              "name": "prompt",
+              "value": "=Based on the following protocol information, categorize it into exactly one of these categories: Artificial Intelligence, RWAs (real world assets), DePin (Decentralized Physical Infrastructure Networks), Borrowing/lending, Stable Coins, Meme Finance, Restaking Pool. Protocol Name: {{$json.name}}\\nOriginal Category: {{$json.category}} Description: {{$json.description}} Please respond with only one of the listed categories.",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "c8e47ee2-36fa-4d91-95e2-f916d636d29b",
+      "name": "Edit Fields2",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1180,
+        1240
+      ]
+    },
+    {
+      "parameters": {
+        "model": "llama3.1:latest",
+        "options": {}
+      },
+      "id": "9e55a15c-d8a6-480d-8c16-4f3ce1bbc6da",
+      "name": "Ollama Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        1340,
+        1140
+      ],
+      "credentials": {
+        "ollamaApi": {
+          "id": "jqcEGGsgA2Xk8BfC",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 50,
+        "options": {}
+      },
+      "id": "2119771f-a861-4c28-9758-cd7bf30a6bcb",
+      "name": "Loop Over Items",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1080,
+        1420
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "-1002090870379",
+        "text": "Neayield pool update completed! Added 3500 protocols!",
+        "additionalFields": {
+          "appendAttribution": true
+        }
+      },
+      "id": "14c2951e-09bc-4b21-a084-6a6fefd9bd49",
+      "name": "Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1280,
+        1400
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "GvQTifMUEnzDOHUO",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.prompt }}",
+        "options": {
+          "systemMessage": "You are a DeFi protocol categorization expert. Your task is to analyze protocol information and categorize it into predefined categories based on their core functionalities and features. You must choose exactly one category that best represents the protocol's primary function.\n\nAvailable categories:\n\"Artificial Intelligence\" - Protocols using AI/ML for their core operations\n\"RWA\" (Real World Assets) - Protocols dealing with tokenization or management of real-world assets\n\"DePin\" (Decentralized Physical Infrastructure Networks) - Protocols focused on physical infrastructure and hardware networks\n\"Borrowing/Lending\" - Protocols primarily offering lending and borrowing services\n\"Stable Coins\" - Protocols focused on stablecoin creation or management\n\"Meme Finance\" - Protocols centered around meme tokens or meme-based financial products\n\"Restaking Protocols\" - Protocols offering restaking services or liquid staking derivatives\n\nRules:\n- Return ONLY ONE category from the list above. Don't use original category.\n- Do not create new categories or combine categories\n- Focus on the primary function of the protocol\n- Be consistent in categorization across similar protocols\n- Do not explain your reasoning - just return the category\n- Use exact category names as listed above"
+        }
+      },
+      "id": "bc300f10-33ee-4d54-acef-5afed5224db2",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        1320,
+        980
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "id": "6a522e60-9616-4356-8047-f69e97cadeab",
+      "name": "Merge1",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        1640,
+        1220
+      ]
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "id": "8cdb2542-3a13-4cc9-9d07-675f339df35d",
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        1860,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "model": "llama3.1:latest",
+        "options": {}
+      },
+      "id": "7ebe4ccc-69c6-443b-8e0a-142f558b4807",
+      "name": "Ollama Model",
+      "type": "@n8n/n8n-nodes-langchain.lmOllama",
+      "typeVersion": 1,
+      "position": [
+        2540,
+        1000
+      ],
+      "credentials": {
+        "ollamaApi": {
+          "id": "jqcEGGsgA2Xk8BfC",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get input from previous node\nconst input = $input.all();\n\n// Initialize the response structure\nlet response = {\n  investments: []\n};\n\n// Function to check if an object is an investment\nfunction isInvestment(item) {\n  return item && typeof item === 'object' && 'chain' in item && 'protocol' in item;\n}\n\n// Function to process investments\nfunction processInvestments(investments) {\n  return investments.map(item => ({\n    chain: item.chain || '',\n    protocol: item.protocol || '',\n    pool: item.pool || '',\n    apr: Number(item.APR) || 0,\n    amount: Number(item.amount) || 0\n  }));\n}\n\n// Check if input exists\nif (Array.isArray(input) && input.length > 0) {\n  let investments = [];\n  const firstInput = input[0];\n\n  // Case 1: Investments are directly in an array\n  if (Array.isArray(firstInput) && firstInput.every(isInvestment)) {\n    investments = firstInput;\n  } \n  // Case 2: Investments are nested in the structure\n  else {\n    investments = \n      firstInput?.investments ||\n      firstInput?.message?.content?.strategy ||\n      firstInput?.message?.content?.pools ||\n      firstInput?.message?.content?.investmentStrategy ||\n      firstInput?.message?.content?.investment_strategy ||\n      firstInput?.json?.message?.content?.strategy ||\n      firstInput?.json?.message?.content?.pools ||\n      firstInput?.json?.message?.content?.chains ||\n      firstInput?.json?.message?.content?.investmentStrategy ||\n      [];\n  }\n\n  // If no investments found, log an error\n  if (investments.length === 0) {\n    console.error('No investments found in input.');\n  }\n\n  // Process the investments\n  response.investments = processInvestments(investments);\n} else {\n  console.error('Input is not a valid array or is empty.');\n}\n\nconsole.log('Final response:', JSON.stringify(response, null, 2));\n\n// Return the properly formatted response\nreturn { json: response };\n"
+      },
+      "id": "a379558d-8423-4bd2-a8cd-d761dd3c1bc4",
+      "name": "Code",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2680,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "name": "pool",
+        "topK": 5
+      },
+      "id": "4dd86d2d-a4f7-4d9f-954a-9e149628bd3f",
+      "name": "Vector Store Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolVectorStore",
+      "typeVersion": 1,
+      "position": [
+        2240,
+        820
+      ]
+    },
+    {
+      "parameters": {
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "nearyield-pools",
+          "mode": "list",
+          "cachedResultName": "nearyield-pools"
+        },
+        "options": {}
+      },
+      "id": "29674e75-3a94-4ce0-99f4-876600e45311",
+      "name": "Pinecone Vector Store2",
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1,
+      "position": [
+        2180,
+        1000
+      ],
+      "credentials": {
+        "pineconeApi": {
+          "id": "EGkHNcUQPWt6nHke",
+          "name": "PineconeApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "nearyield-protocols",
+          "mode": "list",
+          "cachedResultName": "nearyield-protocols"
+        },
+        "options": {}
+      },
+      "id": "5b78bfc4-9908-4191-a4e3-f02e1631cc45",
+      "name": "Pinecone Vector Store",
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1,
+      "position": [
+        1680,
+        1440
+      ],
+      "credentials": {
+        "pineconeApi": {
+          "id": "EGkHNcUQPWt6nHke",
+          "name": "PineconeApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "nearyield-pools",
+          "mode": "list",
+          "cachedResultName": "nearyield-pools"
+        },
+        "options": {}
+      },
+      "id": "28c3cb0e-0b05-48d5-91bb-7d4469121d61",
+      "name": "Pinecone Vector Store1",
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1,
+      "position": [
+        1420,
+        1760
+      ],
+      "credentials": {
+        "pineconeApi": {
+          "id": "EGkHNcUQPWt6nHke",
+          "name": "PineconeApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "load",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "nearyield-pools",
+          "mode": "list",
+          "cachedResultName": "nearyield-pools"
+        },
+        "prompt": "=",
+        "topK": 20,
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "risk_level",
+                "value": "={{ $json.metadataValues[2].value }}"
+              },
+              {
+                "name": "apyavg",
+                "value": "={{\n  $json.metadataValues[1].value.$in[0] === 'low' \n    ? { \"$lt\": 15 }  // As object, not string\n    : $json.metadataValues[1].value.$in[0] === 'medium' \n      ? { \"$and\": [{ \"$gte\": 15 }, { \"$lt\": 100 }] }  // As object, not string\n      : $json.metadataValues[1].value.$in[0] === 'high' \n        ? { \"$gte\": 100 }  // As object, not string\n        : { \"$gte\": 0 }  // As object, not string\n}}"
+              },
+              {
+                "name": "exposure",
+                "value": "multi"
+              },
+              {
+                "name": "tvlusd",
+                "value": "={{\n  $json.metadataValues[1].value.$in[0] === 'low' \n    ? { \"$gte\": 100000000 }  // 100M\n    : $json.metadataValues[1].value.$in[0] === 'medium' \n      ? { \"$gte\": 1000000 }  // 1M\n      : $json.metadataValues[1].value.$in[0] === 'high' \n        ? { \"$gte\": 100000 }  // 100k\n        : { \"$gte\": 0 }\n}}"
+              },
+              {
+                "name": "prediction",
+                "value": "Stable/Up"
+              },
+              {
+                "name": "chain",
+                "value": "={{ $json.metadataValues[1].value }}"
+              }
+            ]
+          }
+        }
+      },
+      "id": "15a0e535-6217-4f8f-bc43-00f0ae754cc7",
+      "name": "Pinecone Vector Store3",
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1,
+      "position": [
+        1280,
+        740
+      ],
+      "credentials": {
+        "pineconeApi": {
+          "id": "EGkHNcUQPWt6nHke",
+          "name": "PineconeApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "load",
+        "pineconeIndex": {
+          "__rl": true,
+          "value": "nearyield-protocols",
+          "mode": "list",
+          "cachedResultName": "nearyield-protocols"
+        },
+        "prompt": "={{ $json.prompt }}",
+        "topK": 5,
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "={{ $json.metadataValues[0].name }}",
+                "value": "={{ $json.metadataValues[0].value }}"
+              },
+              {
+                "name": "={{ $json.metadataValues[1].name }}",
+                "value": "={{ $json.metadataValues[1].value }}"
+              },
+              {
+                "name": "={{ $json.metadataValues[2].name }}",
+                "value": "={{ $json.metadataValues[2].value }}"
+              }
+            ]
+          }
+        }
+      },
+      "id": "3af346e4-ad38-4ef6-87b3-1cb1c57ddafe",
+      "name": "Pinecone Vector Protocols FIlter",
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1,
+      "position": [
+        1300,
+        360
+      ],
+      "credentials": {
+        "pineconeApi": {
+          "id": "EGkHNcUQPWt6nHke",
+          "name": "PineconeApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "You are an infallible DeFi investment assistant specializing in intelligent pool allocation strategies. When analyzing pools and creating investment allocations, follow these rules:\n\n1. Pool Selection Rules by Risk Level:\n   - LOW RISK: Select minimum 2 pools\n      • Prioritize pools with no impermanent loss risk\n      • Maximum 60% allocation to any single pool\n\n\n   - MEDIUM RISK: Select minimum 3 pools\n      • Balance between high APR and high TVL pools\n      • Maximum 50% allocation to any single pool\n      • Include at least 2 different chains\n\n   - HIGH RISK: Select minimum 4 pools\n      • Prioritize highest APR pools\n      • Maximum 40% allocation to any single pool\n      • Include at least 2 different chains\n\n2. Allocation Priority Factors:\n   - Higher TVL pools should receive larger allocations\n   - Higher APR increases allocation percentage\n   - Allocations should be spread across different chains\n\n3. Output Requirements:\n   - Return JSON array with pools matching risk level minimum\n   - Each pool must include chain, protocol, pool name, APR, and amount\n   - Sum of amounts must exactly equal total investment\n   - No explanatory text, only JSON array\n   - Don't include the same pool twice\n   - Never reply that you have insufficent data, still use the context to generate strategy\n\nExample Output:\n[\n  {\n    \"chain\": \"Ethereum\",\n    \"protocol\": \"curve-dex\",\n    \"pool\": \"USDC-ETH\",\n    \"APR\": 25.5,\n    \"amount\": 2000\n  },\n  {\n    \"chain\": \"Optimism\",\n    \"protocol\": \"velodrome\",\n    \"pool\": \"ETH-USDC\",\n    \"APR\": 30.2,\n    \"amount\": 1630\n  }\n]",
+              "role": "assistant"
+            },
+            {
+              "content": "=Generate an investment strategy for these parameters {{ $json.originalCriteria }}"
+            },
+            {
+              "content": "=Use this context to generate a custom strategy for the user. \nIf needed use the TOOLS \n{tools} to retrieve additional data for the projects and pools.\n\nPools that match the users criteria:\n{{ $json.matchingPools }}\nProtocols that match the users needs:\n{{ $json.matchingProtocols }}\n\n",
+              "role": "system"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "id": "c53007e8-15da-4cd2-b4c5-1f97ee0d5e02",
+      "name": "OpenAI",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.6,
+      "position": [
+        2240,
+        600
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "gevcBoKgJpWmhkCg",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "9a5ceb5e-5f1c-480f-bb39-1a194f991050",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "188cd7c6-9a1e-40a8-8f30-3a38296df3f0",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        520,
+        580
+      ],
+      "webhookId": "9a5ceb5e-5f1c-480f-bb39-1a194f991050"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Recursive Character Text Splitter": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Vectorizing Data and Adding Metadata",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetching Protocol": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Ollama": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Delete Vectors1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Delete Vectors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparing Metadata": {
+      "main": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vectorizing Data and Adding Metadata": {
+      "ai_document": [
+        [
+          {
+            "node": "Pinecone Vector Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Vectors1": {
+      "main": [
+        [
+          {
+            "node": "Fetching Protocol",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Creating pools metadata": {
+      "main": [
+        [
+          {
+            "node": "Pinecone Vector Store1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Pinecone Vector Store1",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Vectors": {
+      "main": [
+        [
+          {
+            "node": "Fetching Pools",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Ollama3": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Pinecone Vector Store2",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Filtering Out non EVM chains": {
+      "main": [
+        [
+          {
+            "node": "Creating pools metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetching Pools": {
+      "main": [
+        [
+          {
+            "node": "Filtering Out non EVM chains",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Ollama4": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Pinecone Vector Store3",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter1": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prompt and Context parser": {
+      "main": [
+        [
+          {
+            "node": "OpenAI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Ollama2": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Pinecone Vector Store1",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Ollama1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Pinecone Vector Protocols FIlter",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Excracting Metadata Vector Query": {
+      "main": [
+        [
+          {
+            "node": "Pinecone Vector Store3",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Pinecone Vector Protocols FIlter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Excracting Metadata Vector Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Preparing Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Prompt and Context parser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Vector Store Tool",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vector Store Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "OpenAI",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pinecone Vector Store2": {
+      "ai_vectorStore": [
+        [
+          {
+            "node": "Vector Store Tool",
+            "type": "ai_vectorStore",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pinecone Vector Store": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pinecone Vector Store3": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pinecone Vector Protocols FIlter": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "OpenAI": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "e4f1cdd6-bf89-4dc7-a12a-7b1ecc8fcc24",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2238f5639b70d0eb9d4b7ce4f8ec9c93f6917a1dd7e8ee5fbfb592aa0162ff25"
+  },
+  "id": "2nwu2MzKWKl4Q83g",
+  "tags": [
+    {
+      "createdAt": "2024-11-02T13:48:38.457Z",
+      "updatedAt": "2024-11-02T13:48:38.457Z",
+      "id": "bjab8tVKi3NR3jUT",
+      "name": "draft"
+    }
+  ]
+}
