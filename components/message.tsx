@@ -16,6 +16,11 @@ import { PreviewAttachment } from './preview-attachment';
 import { Weather } from './weather';
 import Strategy from './strategy';
 import { Button } from './ui/button';
+import { createWalletClient, custom, parseEther } from 'viem';
+import { baseSepolia } from 'viem/chains';
+import { IEthereum } from '@dynamic-labs/ethereum';
+import { toast } from 'sonner';
+import Link from 'next/link';
 
 export const PreviewMessage = ({
   chatId,
@@ -32,6 +37,59 @@ export const PreviewMessage = ({
   vote: Vote | undefined;
   isLoading: boolean;
 }) => {
+  const walletClient = createWalletClient({
+    chain: baseSepolia,
+    transport: custom<IEthereum>(window.ethereum!),
+  });
+
+  const onInvest = async () => {
+    walletClient.switchChain({
+      id: baseSepolia.id,
+    });
+
+    const address = await walletClient.getAddresses();
+    const hash = await walletClient.writeContract({
+      account: address[0],
+      abi: [
+        {
+          type: 'function',
+          name: 'addLiquidityWithETH',
+          inputs: [
+            {
+              name: 'router',
+              type: 'address',
+              internalType: 'contract IUniswapV2Router02',
+            },
+            { name: 'tokenA', type: 'address', internalType: 'address' },
+            { name: 'tokenB', type: 'address', internalType: 'address' },
+          ],
+          outputs: [
+            { name: 'amountA', type: 'uint256', internalType: 'uint256' },
+            { name: 'amountB', type: 'uint256', internalType: 'uint256' },
+            { name: 'liquidity', type: 'uint256', internalType: 'uint256' },
+          ],
+          stateMutability: 'payable',
+        },
+      ],
+      functionName: 'addLiquidityWithETH',
+      args: [
+        '0x926C2095204B000cFb9088A208aB0f742dEded0B',
+        '0x25796265CBA4AE2AdbB3ED926ca4D981b66C2ef9',
+        '0x4Dfe25A733c24b56FF40AcA91EFcc9eE260240E4',
+      ],
+      address: '0xaB470Aa6b1a8DDEfbA4096e189877694855171e0',
+      value: parseEther('0.01'),
+    });
+    toast.success(
+      <Link
+        href={`https://base-sepolia.blockscout.com/tx/${hash}`}
+        target='_blank'
+      >
+        Transaction sent
+      </Link>
+    );
+  };
+
   return (
     <motion.div
       className='w-full mx-auto max-w-3xl px-4 group/message'
@@ -93,7 +151,9 @@ export const PreviewMessage = ({
                       ) : toolName === 'getStrategies' ? (
                         <div>
                           <Strategy investments={result.strategies} />
-                          <Button className='w-full'>Invest now</Button>
+                          <Button className='w-full' onClick={onInvest}>
+                            Invest now
+                          </Button>
                         </div>
                       ) : (
                         <pre>{JSON.stringify(result, null, 2)}</pre>
